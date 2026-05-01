@@ -54,6 +54,11 @@ func (s *Service) Delete(id int) error {
 	return s.store.Delete(id)
 }
 
+// DeleteCompleted removes all completed tasks. Returns the count removed.
+func (s *Service) DeleteCompleted() (int, error) {
+	return s.store.DeleteCompleted()
+}
+
 // Move slides the task by delta positions within its active/done region.
 // Cross-region moves and boundary moves are silently rejected.
 func (s *Service) Move(id int, delta int) error {

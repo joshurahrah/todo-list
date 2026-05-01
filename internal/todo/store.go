@@ -14,4 +14,6 @@ type Store interface {
 	// Move slides the task with the given ID by delta positions (positive = down).
 	// Clamped at list boundaries. Uses insert semantics, not swap.
 	Move(id int, delta int) error
+	// DeleteCompleted removes all completed tasks. Returns the count removed.
+	DeleteCompleted() (int, error)
 }

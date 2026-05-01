@@ -59,6 +59,40 @@ func (m *MemStore) Delete(id int) error {
 	return ErrNotFound
 }
 
+// DeleteCompleted removes all completed tasks and returns the count removed.
+func (m *MemStore) DeleteCompleted() (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var kept []Task
+	count := 0
+	for _, t := range m.tasks {
+		if t.Done {
+			count++
+		} else {
+			kept = append(kept, t)
+		}
+	}
+	m.tasks = kept
+	return count, nil
+}
+
+// snapshot returns a copy of tasks and the current nextID for serialization.
+func (m *MemStore) snapshot() ([]Task, int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	tasks := make([]Task, len(m.tasks))
+	copy(tasks, m.tasks)
+	return tasks, m.nextID
+}
+
+// newMemStoreFromSnapshot constructs a MemStore pre-populated with the given tasks and nextID.
+func newMemStoreFromSnapshot(tasks []Task, nextID int) *MemStore {
+	s := &MemStore{nextID: nextID}
+	s.tasks = make([]Task, len(tasks))
+	copy(s.tasks, tasks)
+	return s
+}
+
 // Move slides the task with the given ID by delta positions using insert semantics.
 // The target index is clamped to [0, len-1]. Positive delta moves down, negative up.
 func (m *MemStore) Move(id int, delta int) error {

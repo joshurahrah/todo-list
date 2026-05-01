@@ -2,7 +2,7 @@ package todo
 
 // Task is a single to-do item.
 type Task struct {
-	ID   int
-	Text string
-	Done bool
+	ID   int    `json:"id"`
+	Text string `json:"text"`
+	Done bool   `json:"done"`
 }
