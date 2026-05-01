@@ -26,7 +26,6 @@ const (
 	modeAdd
 	modeEdit
 	modeConfirmDelete
-	modeConfirmDeleteCompleted
 	modeAddTab
 	modeConfirmDeleteTab
 )
@@ -41,11 +40,10 @@ type model struct {
 	tabs           []tabUI
 	input          textinput.Model
 	mode           mode
-	errMsg         string
-	editID         int
-	deleteID       int
-	completedCount int
-	deleteTabID    int
+	errMsg      string
+	editID      int
+	deleteID    int
+	deleteTabID int
 	savePath       string
 	width          int
 	height         int
@@ -202,8 +200,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateEdit(msg)
 		case modeConfirmDelete:
 			return m.updateConfirmDelete(msg)
-		case modeConfirmDeleteCompleted:
-			return m.updateConfirmDeleteCompleted(msg)
 		case modeAddTab:
 			return m.updateAddTab(msg)
 		case modeConfirmDeleteTab:
@@ -271,25 +267,6 @@ func (m model) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.deleteID = id
 		m.mode = modeConfirmDelete
-		return m, nil
-
-	case "D":
-		tasks, err := m.activeSvc().List()
-		if err != nil {
-			m.errMsg = err.Error()
-			return m, nil
-		}
-		count := 0
-		for _, t := range tasks {
-			if t.Done {
-				count++
-			}
-		}
-		if count == 0 {
-			return m, nil
-		}
-		m.completedCount = count
-		m.mode = modeConfirmDeleteCompleted
 		return m, nil
 
 	case " ":
@@ -418,27 +395,6 @@ func (m model) updateConfirmDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) updateConfirmDeleteCompleted(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "y":
-		if _, err := m.activeSvc().DeleteCompleted(); err != nil {
-			m.errMsg = err.Error()
-			m.mode = modeList
-			return m, nil
-		}
-		if err := refreshItems(m.activeSvc(), m.activeList(), 0); err != nil {
-			m.errMsg = err.Error()
-		}
-		m.mode = modeList
-		m = m.save()
-		return m, nil
-	case "n", "esc":
-		m.mode = modeList
-		return m, nil
-	}
-	return m, nil
-}
-
 func (m model) updateAddTab(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
@@ -509,12 +465,12 @@ func (m model) View() string {
 	var footer string
 	switch m.mode {
 	case modeList:
-		footer = "a:add  e:edit  d:del  D:del done  spc:done  j/k:move  t:new tab  X:del tab  tab/S-tab:cycle  q:quit"
+		footer = "a:add  e:edit  d:del  spc:done  j/k:move  t:new tab  X:del tab  tab/S-tab:cycle  q:quit"
 	case modeAdd, modeEdit:
 		footer = "enter:save  esc:cancel"
 	case modeAddTab:
 		footer = "enter:create tab  esc:cancel"
-	case modeConfirmDelete, modeConfirmDeleteCompleted, modeConfirmDeleteTab:
+	case modeConfirmDelete, modeConfirmDeleteTab:
 		footer = "y:yes  n:no"
 	}
 
@@ -526,8 +482,6 @@ func (m model) View() string {
 		body += "\n" + m.input.View()
 	case modeConfirmDelete:
 		body += "\n" + errStyle.Render("Delete this task? (y/n)")
-	case modeConfirmDeleteCompleted:
-		body += "\n" + errStyle.Render(fmt.Sprintf("Delete all %d completed tasks? (y/n)", m.completedCount))
 	case modeConfirmDeleteTab:
 		body += "\n" + errStyle.Render(fmt.Sprintf("Delete tab '%s' and all its tasks? (y/n)", m.deleteTabName()))
 	}
